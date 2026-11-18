@@ -1,0 +1,53 @@
+# Fire spread engine for the Kroumirie pilot zone (ADR 0004). Paths are relative to the repo root.
+rasters:
+  terrain: data/raw/gee/kroumirie_terrain.tif     # band 1 = elevation (m), EPSG:32632
+  landcover: data/raw/gee/kroumirie_worldcover.tif
+  ndvi: data/raw/gee/kroumirie_ndvi.tif
+fuels: spread/config/fuels.yaml
+
+grid:
+  window_m: 12000     # square window centred on the first detecting sensor
+  cell_m: 100
+
+physics:
+  # ASSUMPTION: midflame wind ~ 0.4 x the 10 m wind under a partly open canopy (wind
+  # adjustment factor, Andrews 2012 gives 0.1-0.5); used only for the ellipse shape.
+  midflame_factor: 0.4
+  max_length_to_breadth: 8.0
+  upslope_coeff: 0.069     # x exp(0.069 * slope deg): about x2 per 10 deg (CLAUDE.md, Butler 2007)
+  downslope_coeff: 0.035   # ASSUMPTION: half the effect going down
+  horizon_limit_min: 1440  # arrival times beyond 24 h are not computed
+  # ASSUMPTION: FBP rate-ISI curvature (c ~ 1.5 for forest fuel types, Forestry Canada 1992).
+  # Gives ~7 m/min in forest and ~25 m/min in maquis under a 30 km/h wind, within the range
+  # reported for wind-driven Mediterranean fires (Fernandes 2001; to check on Melloula 2023).
+  wind_exponent: 1.5
+
+ensemble:
+  members: 200
+  seed: 7
+  wind_dir_sigma_deg: 25     # around the observed wind
+  wind_dir_outliers: 0.1     # share of members with any wind direction
+  wind_speed_sigma_log: 0.5  # ASSUMPTION: a point reading can be off by x1.5-2 at the fire (terrain, gusts)
+  fuel_sigma_log: 0.3
+  ignition_radius_m: 1200    # the fire started at most this far from the first sensor ...
+  ignition_distance_sigma_m: 400   # ... usually close (half-normal): sensors sit where fires start (ASSUMPTION)
+  ignition_upwind_sigma_deg: 45   # ... upwind of it (smoke drifts downwind to the sensor)
+  lag_min: [0, 5]            # detection lag after the fire reaches a sensor's radius
+  resample_below_ess: 0.3    # regenerate members when ESS < 30 % of members ...
+  move_rounds: 6             # ... resample, then 6 Metropolis-Hastings moves (tuned on synthetic fires)
+  jitter:
+    wind_dir_deg: 8
+    wind_speed_rel: 0.1
+    fuel_rel: 0.1
+    ignition_m: 100
+    lag_min: 1
+
+observations:
+  detect_radius_m: 300    # ASSUMPTION: a sensor smells the fire within 300 m
+  sigma_min: 6            # timing error of the model at first ...
+  sigma_rel: 0.2          # ... plus 20 % of the time since the first detection (ASSUMPTION)
+
+forecast:
+  horizons_min: [15, 30, 60, 120]
+  bands: [0.2, 0.5, 0.8]
+  simplify_m: 40

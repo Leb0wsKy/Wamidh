@@ -1,0 +1,283 @@
+@import 'tailwindcss';
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-sans/latin-700.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-700.css';
+
+/* Wamidh visual identity (CLAUDE.md section 4). Colour carries state only: the calm
+   interface is ink on warm paper; amber means alert, ember red means fire. */
+@theme {
+  --color-ember: #b3261e;
+  --color-ember-deep: #8e1d17;
+  --color-ember-soft: #f4e9e7;
+  --color-alert: #9a6400; /* amber text on paper (contrast >= 4.5) */
+  --color-alert-fill: #e3b505;
+  --color-alert-soft: #fbf3dc;
+  --color-ok: #2e7d4f;
+  --color-ok-soft: #e7f2ea;
+  --color-ink: #1a1a19;
+  --color-ink-2: #5b5a56;
+  --color-ink-3: #8a8984;
+  --color-line: #e6e3dd;
+  --color-line-strong: #cfcbc3;
+  --color-paper: #faf8f5;
+  --color-surface: #ffffff;
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Section labels: small, spaced capitals (Latin only; Arabic has no case). */
+.eg-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+}
+:lang(ar) .eg-label {
+  letter-spacing: 0;
+  font-size: 0.8125rem;
+}
+
+/* Fire markers pulse; everything else stays still. */
+@keyframes eg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.eg-pulse {
+  animation: eg-pulse 1s ease-in-out infinite;
+}
+
+@keyframes eg-flash {
+  0%,
+  100% {
+    background-color: var(--color-ember);
+  }
+  50% {
+    background-color: var(--color-ember-deep);
+  }
+}
+.eg-flash {
+  animation: eg-flash 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eg-pulse,
+  .eg-flash,
+  .eg-node[data-state='FIRE']::after {
+    animation: none;
+  }
+}
+
+/* Station map: muted base map so sensors and fire carry the colour. */
+.eg-map-muted .leaflet-tile-pane {
+  filter: saturate(0.3) brightness(1.03) contrast(0.92);
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+}
+.leaflet-bar,
+.leaflet-control-layers {
+  border: 1px solid var(--color-line-strong) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgb(26 26 25 / 0.08) !important;
+}
+.leaflet-control-layers-expanded {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.leaflet-tooltip {
+  border: 1px solid var(--color-line-strong);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgb(26 26 25 / 0.12);
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+/* Sensor marker: a numbered disc in the state colour. */
+.eg-node {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  color: #fff;
+  font: 700 12px/1 var(--font-sans);
+  box-shadow: 0 1px 3px rgb(26 26 25 / 0.35);
+}
+.eg-node.eg-node-dot {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+/* Hovered from the list: the dot grows in place (never an icon swap, see mapIcons.ts). */
+.eg-node.eg-node-dot[data-highlight] {
+  transform: scale(1.6);
+}
+.eg-node[data-state='ALERT'] {
+  color: var(--color-ink);
+}
+.eg-node[data-state='FIRE'] {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  position: relative;
+}
+.eg-node[data-state='FIRE']::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 3px solid var(--color-ember);
+  animation: eg-ring 1.4s ease-out infinite;
+}
+@keyframes eg-ring {
+  from {
+    transform: scale(0.7);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Gateway and station markers. */
+.eg-gateway {
+  display: grid;
+  place-items: center;
+  color: var(--color-ink);
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+}
+.eg-station {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-ember);
+  background: #fff;
+  border: 1.5px solid var(--color-ember);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgb(26 26 25 / 0.25);
+}
+.eg-fire-origin {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #fff;
+  background: var(--color-ember);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(26 26 25 / 0.35);
+}
+.leaflet-tooltip.eg-station-label {
+  padding: 2px 6px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Sensor under the pointer in the card list: lifted, with an ink ring. */
+.eg-node[data-highlight] {
+  transform: scale(1.25);
+  box-shadow:
+    0 0 0 3px var(--color-ink),
+    0 2px 8px rgb(26 26 25 / 0.4);
+}
+.eg-node {
+  transition: transform 120ms ease-out;
+}
+
+/* Map data tags: one beside each sensor. Quiet when calm, amber in alert, ember on fire. */
+.leaflet-tooltip.eg-tag {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+  padding: 1px 6px 1px 4px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--color-ink-2);
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.leaflet-tooltip.eg-tag .eg-tag-id {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.leaflet-tooltip.eg-tag-ALERT {
+  color: var(--color-ink);
+  background: var(--color-alert-soft);
+  border-color: var(--color-alert-fill);
+}
+.leaflet-tooltip.eg-tag-FIRE {
+  padding: 2px 8px 2px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-ember);
+  border-color: var(--color-ember);
+}
+.leaflet-tooltip.eg-tag-FIRE .eg-tag-id {
+  color: #fff;
+}
+.leaflet-tooltip.eg-tag-OFFLINE,
+.leaflet-tooltip.eg-tag-LOST_PROBABLY_BURNED {
+  color: var(--color-ink);
+  background: #ececea;
+}
+.leaflet-tooltip-right.eg-tag::before {
+  border-right-color: var(--color-line-strong);
+}
+.leaflet-tooltip-right.eg-tag-ALERT::before {
+  border-right-color: var(--color-alert-fill);
+}
+.leaflet-tooltip-right.eg-tag-FIRE::before {
+  border-right-color: var(--color-ember);
+}
+
+/* Sensor popup: the card is drawn by SensorDetails; Leaflet only provides the frame. */
+.eg-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgb(26 26 25 / 0.18);
+}
+.eg-popup .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+.eg-popup .leaflet-popup-content p {
+  margin: 0; /* Leaflet's default 1.3em paragraph margins made the popup taller than the map */
+}
+
+/* Propagation tab: the head of the fire, an arrow along its heading. */
+.eg-head {
+  color: var(--color-ember);
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+}

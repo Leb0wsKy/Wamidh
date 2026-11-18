@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wamidh.invalid/contracts/v1/telemetry.schema.json",
+  "title": "Wamidh node telemetry (v1)",
+  "description": "Periodic node reading. Mirrors the 19-byte LoRa packet (packet_format.md). Published on wamidh/v1/nodes/{node_id}/telemetry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "node_id",
+    "seq",
+    "ts",
+    "state",
+    "gas_ratio",
+    "temp_c",
+    "rh_pct",
+    "flame",
+    "fire_prob",
+    "battery_v",
+    "sig"
+  ],
+  "properties": {
+    "node_id": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Wraps at 65535; used for de-duplication and packet-loss statistics."
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC, ISO-8601 with Z."
+    },
+    "state": {
+      "enum": [
+        "NORMAL",
+        "ALERT",
+        "FIRE"
+      ]
+    },
+    "gas_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 4,
+      "description": "Current gas resistance / node's local baseline. Smoke lowers resistance, so the ratio falls below 1."
+    },
+    "temp_c": {
+      "type": "number",
+      "minimum": -40,
+      "maximum": 125
+    },
+    "rh_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "flame": {
+      "type": "boolean"
+    },
+    "fire_prob": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "On-board classifier output. Fuses gas, temperature, IR flame and the on-node camera (ADR 0001); the camera's own result is never transmitted."
+    },
+    "battery_v": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "sig": {
+      "type": "string",
+      "description": "Base64 truncated HMAC over the canonical payload with the node's key."
+    }
+  },
+  "examples": [
+    {
+      "node_id": 42,
+      "seq": 1024,
+      "ts": "2026-10-01T12:00:00Z",
+      "state": "ALERT",
+      "gas_ratio": 0.62,
+      "temp_c": 41.3,
+      "rh_pct": 12.0,
+      "flame": false,
+      "fire_prob": 0.71,
+      "battery_v": 3.28,
+      "sig": "base64-hmac"
+    }
+  ]
+}

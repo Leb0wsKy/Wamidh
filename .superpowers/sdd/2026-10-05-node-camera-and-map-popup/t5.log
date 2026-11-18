@@ -1,0 +1,13 @@
+
+ RUN  v5.0.2 C:/Users/Admin/Desktop/sight-ceda/web
+
+
+ Test Files  21 passed (21)
+      Tests  85 passed (85)
+   Start at  16:35:38
+   Duration  3.63s (environment 70%, setup 16%, tests 7%, transform 5%, import 2%)
+
+Environment  jsdom was created 21 times · 26.92s total, 70% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

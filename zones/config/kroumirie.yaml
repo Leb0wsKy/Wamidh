@@ -1,0 +1,48 @@
+# Alert zones for the Kroumirie pilot (ADR 0003). Paths are relative to the repository root.
+
+# lon_min, lat_min, lon_max, lat_max: the pilot zone plus the towns around it (Ain Draham,
+# Tabarka, Fernana), so every village near a sensor gets a zone.
+bbox: [8.45, 36.60, 8.95, 37.00]
+
+inputs:
+  buildings: data/raw/osm/gis_osm_buildings_a_free_1.shp
+  places: data/raw/osm/gis_osm_places_free_1.shp
+  worldpop: data/raw/worldpop/tun_ppp_2020_constrained.tif
+  susceptibility: data/processed/susceptibility_kroumirie.tif
+  towers: data/raw/opencellid/605.csv.gz
+outputs: data/processed
+
+downloads:
+  # WorldPop 2020, constrained, 100 m, CC BY 4.0 (no account needed).
+  worldpop_url: https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/2020/BSGM/TUN/tun_ppp_2020_constrained.tif
+  # OpenCelliD bulk download for one country (MCC 605 = Tunisia). {key} comes from
+  # OPENCELLID_API_KEY in the environment or .env; it is never printed.
+  opencellid_url: https://opencellid.org/ocid/downloads?token={key}&type=mcc&file=605.csv.gz
+
+# ASSUMPTION: a settlement = at least 5 elements (OSM buildings or WorldPop cells with people)
+# each within 150 m of another (WorldPop cells are 100 m apart, so touching cells link);
+# outline = 60 m around them. Chosen for scattered Kroumirie douars; to be checked on imagery.
+clusters:
+  eps_m: 150
+  min_people_per_cell: 1   # WorldPop cells with fewer people are ignored
+  min_buildings: 5
+  buffer_m: 60
+  simplify_m: 10
+
+names:
+  # A zone takes the name of an OSM place within 2 km, else it is "a douar near" the nearest.
+  radius_m: 2000
+  place_classes: [town, village, hamlet, suburb, locality]
+
+# ASSUMPTION: a zone is as exposed as the most susceptible forest within 1 km of its houses.
+# Percentile among wildland cells of northern Tunisia (placement model, band 2).
+risk:
+  ring_m: 1000
+  high: 80
+  medium: 60
+
+# ASSUMPTION: OpenCelliD ranges are estimates; clip them to a plausible 300 m - 10 km.
+towers:
+  pad_m: 5000
+  min_range_m: 300
+  max_range_m: 10000

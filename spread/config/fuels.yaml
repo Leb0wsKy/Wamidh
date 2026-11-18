@@ -1,0 +1,27 @@
+# Base rate of spread per ESA WorldCover class, in m/min, on flat ground without wind, for a
+# dry summer afternoon. ASSUMPTION: order-of-magnitude values from the literature on
+# Mediterranean fuels (cork-oak / pine forest litter and understory, maquis shrubland, dry
+# grass and stubble), not calibrated on Tunisian fires. Ordering (litter slowest, cured grass
+# fastest) from Scott & Burgan 2005, RMRS-GTR-153; shrubland up to 20 m/min measured in
+# experimental burns by Fernandes 2001, For. Ecol. Manage. 144:67-74. Values chosen within these. To be refined with the Melloula
+# backtest. 0 = does not burn (acts as a barrier).
+classes:
+  10: { name: tree_cover, ros_m_min: 1.0 }   # forest: surface fire in litter and understory
+  20: { name: shrubland, ros_m_min: 3.0 }    # maquis: fast and intense
+  30: { name: grassland, ros_m_min: 6.0 }    # cured summer grass: fastest
+  40: { name: cropland, ros_m_min: 4.0 }     # summer stubble
+  50: { name: built_up, ros_m_min: 0.0 }
+  60: { name: bare, ros_m_min: 0.0 }
+  70: { name: snow_ice, ros_m_min: 0.0 }
+  80: { name: water, ros_m_min: 0.0 }
+  90: { name: wetland, ros_m_min: 0.3 }
+  95: { name: mangroves, ros_m_min: 0.0 }
+  100: { name: moss_lichen, ros_m_min: 0.5 }
+
+# Live fuel moisture proxy: greener vegetation (higher summer NDVI) burns slower.
+# multiplier = clip(1 + slope * (reference - ndvi), low, high). ASSUMPTION.
+ndvi:
+  reference: 0.5
+  slope: 1.0
+  low: 0.6
+  high: 1.4

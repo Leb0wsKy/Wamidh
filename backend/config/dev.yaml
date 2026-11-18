@@ -1,0 +1,102 @@
+# Backend settings for local development and the live demo. Paths are relative to the repo root.
+http:
+  host: 127.0.0.1
+  port: 8000
+
+mqtt:
+  host: localhost
+  port: 1883
+  station_id: 1
+
+database: postgresql+psycopg://wamidh:wamidh-dev-only@127.0.0.1:5433/wamidh   # development only (ADR 0002); deployment sets WAMIDH_DATABASE_URL
+# Fallback without Docker: sqlite:///data/dev/wamidh.db
+registry: config/dev/registry.json           # installed nodes and their keys (provisioning)
+placement_dir: web/public/placement          # gateways and risk overlay from the placement model
+
+# Silence before the watchdog acts, per state. DEMO TIMING: 4x the demo reporting intervals
+# of simulator/config/demo.yaml. Field values (contracts/mqtt_topics.md): 60 / 10 / 5 min.
+silent_after_s:
+  NORMAL: 40
+  ALERT: 20
+  FIRE: 10
+watchdog_tick_s: 2
+
+incidents:
+  join_radius_km: 3      # a FIRE within 3 km of an open incident's nodes joins it
+  join_window_min: 60
+
+# Fire stations shown on the map; station 1 is notified by the siren and is where crews start.
+stations:
+  - id: 1
+    name: Protection civile — Aïn Draham
+    lon: 8.689389     # 8°41'21.8"E
+    lat: 36.791639    # 36°47'29.9"N
+    source: position provided by the team (not in OpenStreetMap)
+  - id: 2
+    name: Protection civile — Tabarka
+    lon: 8.78704
+    lat: 36.94565
+    source: OpenStreetMap (reinforcement)
+
+crews:
+  - {id: 1, name: Équipe 1, station_id: 1}
+  - {id: 2, name: Équipe 2, station_id: 1}
+  - {id: 3, name: Équipe 3, station_id: 1}
+
+# Zone drawn around each node on the dashboard: the area the node is responsible for (half the
+# 1 km spacing between optimised sites). NOT the detection range, which the placement model
+# assumes to be 60 m upwind / 30 m downwind (placement/config/pilot_kroumirie.yaml).
+coverage_radius_m: 500
+
+# In-app navigation for crews (Go button): offline fastest route on OpenStreetMap roads.
+routing:
+  roads: data/raw/osm/gis_osm_roads_free_1.shp   # Geofabrik Tunisia extract (placement step 01)
+  pad_deg: 0.08          # road network loaded around the nodes and stations, ~8 km margin
+  # ASSUMPTION: travel speeds (km/h) per OSM road class for a fire engine on mountain roads.
+  # OSM rarely tags maxspeed in Kroumirie; values are conservative guesses, not measurements.
+  # Classes not listed (footway, path, steps, ...) are not driven.
+  speeds_kmh:
+    motorway: 90
+    motorway_link: 50
+    trunk: 80
+    trunk_link: 40
+    primary: 70
+    primary_link: 40
+    secondary: 60
+    secondary_link: 40
+    tertiary: 50
+    tertiary_link: 30
+    unclassified: 40
+    residential: 30
+    living_street: 15
+    service: 20
+    track: 20
+    track_grade1: 25
+    track_grade2: 20
+    track_grade3: 15
+    track_grade4: 10
+    track_grade5: 8
+
+# Dashboard trends and timeline (GET /api/v1/history): readings per sensor sent at most.
+# Every state change is kept on top of this budget.
+history:
+  max_points: 120
+
+# Wind at the fire (ADR 0004): OpenWeatherMap current weather, key OPENWEATHER_API_KEY in .env.
+weather:
+  cache_s: 600
+  timeout_s: 4
+  # ASSUMPTION: used only without key or network: a moderate westerly, the prevailing summer
+  # direction over Kroumirie, to be checked against ERA5 (placement climate layer).
+  default: {from_deg: 270, speed_ms: 5}
+  # DEMO ONLY: replaces the measurement so a simulated fire and the forecast share one wind on
+  # a calm day, e.g. {from_deg: 210, speed_ms: 8}. Shown as "demo" in the interface. null = off.
+  demo_override: null
+
+# Fire spread prediction engine (ADR 0004).
+spread:
+  config: spread/config/kroumirie.yaml
+  # DEMO TIMING: simulated fires run 60x faster than the clock (python -m wamidh_sim.scenario
+  # --speed 60); the model converts observed intervals back to fire minutes. Field value: 1.
+  time_scale: 60
+  refresh_s: 5           # recompute the burning incidents' forecasts (calm sensors keep informing)

@@ -1,0 +1,212 @@
+# Wamidh placement pipeline — Kroumirie pilot (Jendouba governorate).
+# Every number that is not measured is marked ASSUMPTION with its rationale.
+# Paths are relative to the repository root.
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  figures: docs/figures
+  style: docs/figures/wamidh.mplstyle
+
+crs:
+  storage: "EPSG:4326"   # WGS84 for storage and exchange
+  metric: "EPSG:32632"   # UTM 32N for distances and areas (CLAUDE.md §4)
+
+# Study area for the susceptibility model: northern Tunisia.
+study_area:
+  # west, south, east, north (degrees). Covers the Tell and the northern coast.
+  bbox: [7.9, 35.4, 11.2, 37.6]
+  # ADM1 units (geoBoundaries shapeName) used for the spatial cross-validation folds.
+  # Names are matched case-insensitively after accent stripping (checked against
+  # data/raw/boundaries/tun_adm1.geojson, geoBoundaries 2023 build).
+  governorates:
+    - Jendouba
+    - Beja
+    - Bizerte
+    - El Kef
+    - Siliana
+    - Nabeul
+    - Zaghouan
+    - Ariana
+    - Manouba
+    - Ben Arous
+    - Tunis
+
+# Pilot zone for node placement.
+pilot_zone:
+  name: kroumirie
+  # ASSUMPTION: approximate bounding box of the Kroumirie forest massif around
+  # Ain Draham / Tabarka / Fernana. Refine with a forest polygon later.
+  bbox: [8.35, 36.55, 8.95, 36.98]
+
+download:
+  firms:
+    # FIRMS area API: /api/area/csv/{MAP_KEY}/{source}/{bbox}/{day_range}/{date}
+    api_base: https://firms.modaps.eosdis.nasa.gov/api/area/csv
+    sources:
+      VIIRS_SNPP_SP: {start_year: 2012, end_year: 2025}
+      MODIS_SP: {start_year: 2001, end_year: 2025}
+    day_range: 5               # API maximum per request
+    pause_s: 0.3
+    # A 5-day request over this bbox costs several of the 5000 transactions / 10 min the
+    # MAP_KEY allows; when the quota is hit, wait and retry.
+    quota_wait_s: 60
+  osm:
+    url: https://download.geofabrik.de/africa/tunisia-latest-free.shp.zip
+  boundaries:
+    api: https://www.geoboundaries.org/api/current/gbOpen/TUN/ADM1/
+  gee:
+    # Earth Engine exports go to Google Drive, then are copied into data/raw/gee/.
+    drive_folder: wamidh_gee
+    study_scale_m: 90          # 375 m cells get ~4x4 sub-pixels; keeps exports ~50 MB/band
+    pilot_scale_m: 30          # full SRTM resolution for viewsheds and the spread engine
+    ndvi_year_range: [2019, 2024]
+    ndvi_months: [6, 8]        # June–August summer composite
+    s2_max_cloudy_pct: 40      # scene-level filter; pixels are then masked with SCL
+    climate_year_range: [2001, 2024]
+
+fires:
+  season_months: [5, 6, 7, 8, 9, 10]   # May–October
+  # VIIRS confidence is categorical (l/n/h); MODIS is 0–100.
+  viirs_min_confidence: [n, h]
+  # ASSUMPTION: MODIS confidence >= 30 corresponds to FIRMS "nominal" (Giglio et al., MODIS
+  # Collection 6 active fire user guide: low < 30, nominal 30–80, high > 80).
+  modis_min_confidence: 30
+  # ASSUMPTION: drop very weak detections likely to be noise or small agricultural burns.
+  min_frp_mw: 2.0
+  cropland_max_fraction: 0.5           # drop detections whose footprint is mostly cropland
+  # Half-width of the detection footprint used to measure cropland under it (nadir pixel size).
+  footprint_half_m: {VIIRS: 187.5, MODIS: 500}
+  # Space-time DBSCAN with min_samples = 1 (single linkage): detections chain into one event.
+  dbscan:
+    eps_m: 1000                        # ASSUMPTION: same fire if within 1 km ...
+    eps_days: 3                        # ASSUMPTION: ... and within 3 days
+
+grid:
+  cell_size_m: 375                     # aligned with VIIRS 375 m
+  # WorldCover classes counted as burnable wildland: tree 10, shrub 20, grass 30.
+  wildland_classes: [10, 20, 30]
+  min_wildland_fraction: 0.3           # ASSUMPTION: cell kept if >= 30% wildland
+
+features:
+  # OpenStreetMap (Geofabrik `fclass`) groups for the distance features.
+  road_classes: [motorway, motorway_link, trunk, trunk_link, primary, primary_link, secondary,
+                 secondary_link, tertiary, tertiary_link, unclassified, residential,
+                 living_street, service]
+  track_classes: [track, track_grade1, track_grade2, track_grade3, track_grade4, track_grade5]
+  path_classes: [path, footway, bridleway]
+  place_classes: [national_capital, city, town, village, hamlet, suburb]
+  # WorldCover 90 m pixels counted as built-up / cropland for distance-to-edge features.
+  builtup_min_fraction: 0.25           # ASSUMPTION: a quarter of the pixel is buildings/roads
+  cropland_min_fraction: 0.5           # ASSUMPTION: majority cropland
+
+labels:
+  negatives_per_positive: 1
+  seed: 42
+
+model:
+  seed: 42
+  # Spatial CV: leave one governorate out. Governorates too small to test alone are merged.
+  merge_folds:
+    Greater Tunis: [Tunis, Ariana, Ben Arous, Manouba]
+  models: [logistic, random_forest, lightgbm, xgboost]
+  select_by: roc_auc            # mean over spatial folds
+  threshold: 0.5                # for precision/recall on calibrated probabilities
+  random_cv_folds: 5            # the leaky random split, run only to show the inflation
+  permutation_repeats: 10
+  # Hyperparameters: sensible defaults, deliberately not tuned on the test folds.
+  logistic: {C: 1.0}
+  random_forest: {n_estimators: 500, min_samples_leaf: 5}
+  lightgbm: {n_estimators: 400, learning_rate: 0.03, num_leaves: 15, subsample: 0.8,
+             colsample_bytree: 0.8}
+  xgboost: {n_estimators: 400, learning_rate: 0.03, max_depth: 4, subsample: 0.8,
+            colsample_bytree: 0.8, min_child_weight: 1, reg_lambda: 1.0}
+
+# Fire history + temporal validation (steps 04-07; experiment in experiments/fire_history.py).
+# Training: features from fires in [first_year, history_end_year], labels = fire starts after.
+# Deployment (step 07): features from the latest window of the same length (2010-2025).
+fire_history:
+  first_year: 2001              # first fire season in the FIRMS download (MODIS)
+  last_year: 2025               # last complete fire season
+  history_end_year: 2016        # 2001-2016 history (1,374 events), 2017-2025 target (1,536)
+  radii_m: [1000, 5000]         # past fire starts counted within these radii
+  weight_cap: 5                 # repeat-fire weighting: a cell counts at most 5x
+  models: [random_forest, lightgbm]
+
+# Local vs global model for the pilot governorate (placement/experiments/local_vs_global.py).
+# All approaches are scored on the same held-out spatial blocks inside the region.
+local_experiment:
+  region: Jendouba
+  block_m: 10000                # ASSUMPTION: 10 km blocks, several times the 375 m cell and
+                                # the ~1 km positional error of the fire labels
+  n_folds: 5
+  repeats: 3                    # different random block-to-fold assignments, averaged
+  models: [random_forest, lightgbm]
+
+# Hyperparameter search (placement/experiments/tune.py): nested spatial CV, random search.
+# Outer loop = held-out governorate (the honest score); inner loop = leave-one-governorate-out
+# on the remaining regions (the selection). The held-out region never influences the choice.
+tuning:
+  n_iter: 15                    # random combinations tried per model
+  seed: 42
+  space:
+    random_forest:
+      n_estimators: [300]       # more trees only reduce variance; fixed to keep runs short
+      min_samples_leaf: [1, 3, 5, 10, 20, 40]
+      max_features: [sqrt, 0.33, 0.5, 0.8]
+      max_depth: [null, 8, 16]
+    lightgbm:
+      n_estimators: [200, 400, 800]
+      learning_rate: [0.01, 0.03, 0.1]
+      num_leaves: [7, 15, 31]
+      min_child_samples: [10, 30, 60]
+      subsample: [0.7, 0.9]
+      colsample_bytree: [0.5, 0.8, 1.0]
+      reg_lambda: [0, 1, 5]
+    xgboost:
+      n_estimators: [200, 400, 800]
+      learning_rate: [0.01, 0.03, 0.1]
+      max_depth: [2, 3, 4, 6]
+      min_child_weight: [1, 5, 10]
+      subsample: [0.7, 0.9]
+      colsample_bytree: [0.5, 0.8, 1.0]
+      reg_lambda: [0, 1, 5]
+
+optimise:
+  detection_radius_m: 60               # ASSUMPTION: node smoke/flame detection radius (CLAUDE.md default)
+  max_walk_to_track_m: 300             # candidates must be maintainable on foot
+  # Access network for maintenance = features.road_classes + features.track_classes.
+  target_pixel_m: 30                   # risk is spread onto the 30 m pilot DEM grid
+  candidate_spacing_m: 60              # candidate sites every 60 m (every 2nd pixel)
+  min_candidate_wildland: 0.5          # a node is installed in wildland, not on a field
+  # Goal: an affordable set of well-chosen sites, not blanket coverage. One node per hotspot:
+  # fire-start locations are only known to ~375 m-1 km, so nodes closer than this would
+  # guard the same hotspot. Design choice, not a physical constant.
+  min_node_spacing_m: 1000
+  # Risk used to rank sites: the raw model score (all distinct). The calibrated value has
+  # ties (isotonic steps) and is kept for maps and reporting.
+  risk_field: score_raw
+  budget: 200
+  curve_max: 1000                      # nodes placed for the coverage curve
+  curve_marks: [50, 100, 200]
+  random_repeats: 20                   # random placements for the baseline
+  wind:
+    enabled: true
+    # Ratio of downwind to upwind detection radius. Smoke from a fire upwind of the node
+    # drifts onto it; a fire downwind is only seen once it is close.
+    # ASSUMPTION: 0.5, no field measurement yet. Sensitivity analysis planned.
+    downwind_factor: 0.5
+    # Dominant summer wind direction (degrees, direction the wind blows FROM) is
+    # computed from ERA5-Land u/v in the GEE export; this is only a fallback.
+    fallback_from_deg: 290             # ASSUMPTION: prevailing W–NW summer wind in NW Tunisia
+  gateways:
+    node_antenna_m: 2.0                # ASSUMPTION: node mounted on a 2 m pole
+    gateway_antenna_m: 10.0            # ASSUMPTION: 10 m mast on a high point
+    max_range_m: 10000                 # ASSUMPTION: LoRa SF9-10 in hilly terrain with LOS
+    earth_k_factor: 1.3333             # standard atmospheric refraction (4/3 Earth radius)
+    # Gateway candidates: hilltops (highest point within peak_window_m) in the upper part of
+    # the terrain, close enough to a road or track to bring a mast and a solar panel.
+    peak_window_m: 1000
+    peak_min_percentile: 50
+    max_dist_to_access_m: 1000         # ASSUMPTION: mast carried at most 1 km off-road

@@ -1,0 +1,50 @@
+[project]
+name = "wamidh-placement"
+version = "0.1.0"
+description = "Wamidh: ignition-susceptibility model and sensor-node placement optimiser"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "pandas>=2.2",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pyproj>=3.6",
+    "rasterio>=1.4",
+    "scikit-learn>=1.5",
+    "lightgbm>=4.3",
+    "xgboost>=2.0",
+    "shap>=0.46",
+    "matplotlib>=3.9",
+    "pyyaml>=6.0",
+    "pyarrow>=17",
+    "requests>=2.32",
+    "earthengine-api>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+# X for a feature matrix is the scikit-learn convention.
+ignore = ["N803", "N806"]
+
+[tool.ruff.lint.per-file-ignores]
+# Step scripts keep the 01_..09_ names from CLAUDE.md §6.2; they are loaded via importlib.
+"src/placement/steps/*.py" = ["N999"]

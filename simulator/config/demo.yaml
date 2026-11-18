@@ -1,0 +1,25 @@
+# Virtual-node settings for the live demo.
+mqtt:
+  host: localhost
+  port: 1883
+
+backend_url: http://127.0.0.1:8000   # the world process watches incidents here
+registry: config/dev/registry.json   # written by `python -m wamidh_sim.provision`
+
+sample_s: 1          # sensors are read every second
+
+# DEMO TIMING, not the field configuration. Field values (contracts/mqtt_topics.md):
+# NORMAL 15 min, ALERT 2 min, FIRE immediately then continuous. Shortened so that a live demo
+# shows periodic reports within seconds.
+intervals_s:
+  NORMAL: 10
+  ALERT: 5
+  FIRE: 2
+
+ignite_ramp_s: 40    # smoke builds from clean air to a fire at the node in 40 s
+
+# Simulated on-node camera (ADR 0001). PLACEHOLDER for the vision model trained on day and
+# night images. Sleeps in NORMAL; evaluates in ALERT and FIRE.
+camera:
+  timezone: Africa/Tunis
+  daylight_local: ["06:30", "19:30"]   # ASSUMPTION: approximate summer day in Kroumirie

@@ -1,0 +1,38 @@
+# Wamidh shared matplotlib style (CLAUDE.md §4).
+# Use: plt.style.use("docs/figures/wamidh.mplstyle")
+
+figure.dpi: 110
+savefig.dpi: 300
+savefig.bbox: tight
+savefig.facecolor: white
+figure.facecolor: white
+figure.figsize: 6.5, 4.2
+
+font.family: sans-serif
+font.sans-serif: DejaVu Sans, Arial, Helvetica
+font.size: 9
+axes.titlesize: 10
+axes.titleweight: bold
+axes.labelsize: 9
+xtick.labelsize: 8
+ytick.labelsize: 8
+legend.fontsize: 8
+legend.frameon: False
+
+axes.edgecolor: 444444
+axes.linewidth: 0.8
+axes.spines.top: False
+axes.spines.right: False
+axes.grid: True
+grid.color: E6E6E6
+grid.linewidth: 0.6
+axes.axisbelow: True
+
+# Categorical order, validated for colour-vision deficiency (all pairs pass, light surface):
+# 1 accent red (Wamidh / result), 2 blue (comparison / baseline), 3 amber (third class;
+# below 3:1 contrast, so always direct-labelled or in a legend). Greys only for context.
+axes.prop_cycle: cycler('color', ['B3261E', '2a78d6', 'C98500'])
+lines.linewidth: 2.0
+lines.markersize: 6
+# Maps use the single-hue Wamidh ramp built in placement.report.risk_cmap().
+image.cmap: Reds

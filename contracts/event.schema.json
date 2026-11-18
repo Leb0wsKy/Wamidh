@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wamidh.invalid/contracts/v1/event.schema.json",
+  "title": "Wamidh node event (v1)",
+  "description": "State transition or fire alert. Published on wamidh/v1/nodes/{node_id}/event, immediately when it happens.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["node_id", "seq", "ts", "from_state", "to_state", "fire_prob", "sig"],
+  "properties": {
+    "node_id": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "seq": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "ts": { "type": "string", "format": "date-time" },
+    "from_state": { "enum": ["NORMAL", "ALERT", "FIRE"] },
+    "to_state": { "enum": ["NORMAL", "ALERT", "FIRE"] },
+    "fire_prob": { "type": "number", "minimum": 0, "maximum": 1 },
+    "flame": { "type": "boolean" },
+    "sig": { "type": "string" }
+  }
+}

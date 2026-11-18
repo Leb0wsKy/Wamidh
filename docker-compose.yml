@@ -1,0 +1,34 @@
+# Local infrastructure (works offline once the images are pulled). Start with:
+#   docker compose up -d mqtt db
+# Ports are published on 127.0.0.1 only: nothing on the network can reach them.
+services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  # PostgreSQL 16 + PostGIS 3.4 (ADR 0002). Data lives in the named volume below.
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: wamidh
+      POSTGRES_USER: wamidh
+      # Development only; set your own in .env (see .env.example). Deployment never uses this.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wamidh-dev-only}
+    ports:
+      # 5433 on the host: 5432 is often taken by a PostgreSQL already installed on the PC.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - wamidh-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wamidh -d wamidh"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  wamidh-pgdata:

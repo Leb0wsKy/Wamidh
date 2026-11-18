@@ -1,0 +1,36 @@
+# Public Cell Broadcast alerts (ADR 0003). Read by backend/src/wamidh_backend/alerts.py.
+#
+# DRAFT wording: to be validated with the Civil Protection (Protection civile) before any real
+# use. The alert text is always Arabic; the CAP <info> language is ar-TN.
+
+# ASSUMPTION: zones whose outline lies within 3 km of the estimated fire origin are concerned.
+# A fixed radius until the spread engine gives wind- and terrain-aware zones.
+concern_radius_km: 3
+
+cap:
+  sender: wamidh@protection-civile.example  # placeholder sender; the operator sets it
+  sender_name: الحماية المدنية
+  event: حريق غابة
+  category: Fire
+  urgency: Immediate
+  severity: Severe
+  certainty: Likely
+  expires_after_min: 120
+  language: ar-TN
+
+# How a zone is named in the alert text.
+labels:
+  named: "{name}"
+  douar: "دوار قرب {near}"
+  unnamed: "منطقة سكنية {id}"
+  separator: "، "
+  # Cell Broadcast pages are short (93 Arabic characters each): name at most 3 zones.
+  max_named: 3
+  more: "و{n} مناطق أخرى"
+
+headline: "تحذير: حريق غابة قرب {zones}"
+description: "رُصد حريق غابة على بعد حوالي {km} كم من {zones}. ابقوا متيقظين واتبعوا تعليمات الحماية المدنية."
+# Used when the nearest zone is closer than 0.5 km (the fire is at the village).
+description_close: "رُصد حريق غابة بجانب {zones}. ابقوا متيقظين واتبعوا تعليمات الحماية المدنية."
+# 198 is the Tunisian Civil Protection emergency number.
+instruction: "ابتعدوا عن الغابة ولا تقتربوا من الدخان. استعدوا للإخلاء إذا طُلب منكم ذلك. للطوارئ اتصلوا بالرقم 198."

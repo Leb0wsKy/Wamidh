@@ -1,0 +1,29 @@
+[project]
+name = "wamidh-sim"
+version = "0.1.0"
+description = "Wamidh virtual sensor nodes: the sensing layer until the firmware exists"
+requires-python = ">=3.11"
+dependencies = [
+    "wamidh-contracts",
+    "wamidh-spread",  # closed-loop fires use the same physics as the backend (ADR 0004)
+    "aiomqtt>=2.3",
+    "pyyaml>=6.0",
+    "tzdata>=2024.1; sys_platform == 'win32'",  # Windows has no time-zone database
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
